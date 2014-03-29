@@ -1,0 +1,456 @@
+package atm;
+
+/**
+ * ATM自动取款机
+ * @author Administrator
+ *
+ */
+public class ATM {
+	
+	private java.util.Scanner input = new java.util.Scanner(System.in);
+	private User user = new User();
+	private User oldUser = null;
+	private Bank bank = new Bank();
+	private Manager manager = new Manager();
+	private Manager oldManager = null;
+	private int userErrorNum = 0;
+	private int managerErrorNum = 0;
+	
+	/**
+	 * ATM机开始菜单
+	 */
+	public void start() {
+		System.out.println("----------欢迎使用ATM自动存取款机----------");
+		System.out.println("1：开户");
+		System.out.println("2:插卡");
+		System.out.println("3:系统管理");
+		System.out.println("4:退出");
+		System.out.println("-----------------------------------------");
+		
+		System.out.println("请选择菜单项：");
+		String index = input.next();
+		
+		if("1".equals(index)) {
+			//开户
+			createUser();
+		} else if("2".equals(index)) {
+			//插卡
+			login();
+		} else if("3".equals(index)) {
+			//系统管理
+			managerLogin();
+		} else if("4".equals(index)) {
+			//强制让JVM停止运行，0表示JVM正常中止。
+			System.exit(0);
+		} else {
+			System.out.println("错误的选择项！");
+		}
+		
+		start();
+		
+	}
+	
+	/**
+	 * 修改用户密码
+	 */
+	private void changeUserPwd() {
+		System.out.println("请输入原始密码：");
+		
+		if(user.getPassword().equals(input.next())) {
+			System.out.println("请输入新密码：");
+			String newPwd = input.next();
+			
+			System.out.println("清确认新密码：");
+			if (newPwd.equals(input.next())) {
+				user.setPassword(newPwd);
+				System.out.println("密码修改成功！");
+			} else {
+				System.out.println("两次所输入的密码不一致！");
+				
+				changeUserPwd();
+			}
+		} else {
+			System.out.println("密码错误！");
+			
+			if (user.getErroeNum() == 3) {
+				user.setEnable(false);
+				System.out.println("连续三次密码错误，您的账户已被冻结！");
+				user.setErroeNum(0);
+				start();
+			} else {
+				user.setErroeNum(user.getErroeNum() + 1);
+			}
+		}
+		
+	}
+
+	/**
+	 * 系统管理登录验证
+	 */
+	private void managerLogin() {
+		bank.SetManager();
+		System.out.println("请输入管理员账号：");
+		//String name = input.next();
+		
+		manager = bank.validateManagerName(input.next());
+		
+		if(manager != null) {
+			System.out.println("请输入管理员密码：");
+			if(manager.getPassword().equals(input.next())) {
+				manager.setErrorNum(0);
+				System.out.println("管理员" + manager.getName() + "，欢迎您登录系统管理！");
+				showManagerMenu();
+			} else {
+				System.out.println("密码错误！");
+
+				if(managerErrorNum == 0) {
+					oldManager = manager;
+				} else if(oldManager.getErrorNum() == managerErrorNum) {
+					if(oldManager.getErrorNum() == 3) {
+						System.out.println("您已连续三次密码错误，请联系有关工作人员！");
+					} else {
+						managerErrorNum++;
+						oldManager.setErrorNum(managerErrorNum);
+					}
+				}			
+			}
+		} else {
+			System.out.println("输入的管理员账号不存在！");
+		}
+	}
+
+	/**
+	 * 系统管理页面
+	 */
+	private void showManagerMenu() {
+		System.out.println("----------系统管理----------");
+		System.out.println("1:显示所有用户");
+		System.out.println("2：冻结账户");
+		System.out.println("3：恢复账户");
+		System.out.println("4:修改密码");
+		System.out.println("5：退出");
+		System.out.println("---------------------------");
+		
+		System.out.println("请选择菜单项：");
+		String index = input.next();
+		
+		if("1".equals(index)) {
+			showAllCustomers();
+		} else if ("2".equals(index)) {
+			disable();
+		} else if ("3".equals(index)) {
+			recover();
+		} else if ("4".equals(index)) {
+			changeManagerPwd();
+		} else if ("5".equals(index)) {
+			start();
+		} else {
+			System.out.println("输入有误，请重新输入！");
+		}
+		
+		showManagerMenu();
+	}
+
+	/**
+	 * 管理员密码修改
+	 */
+	private void changeManagerPwd() {
+		System.out.println("请输入原始密码：");
+		
+		if(manager.getPassword().equals(input.next())) {
+			System.out.println("请输入新密码：");
+			String newPwd = input.next();
+			
+			System.out.println("清确认新密码：");
+			if (newPwd.equals(input.next())) {
+				manager.setPassword(newPwd);
+				System.out.println("密码修改成功！");
+			} else {
+				System.out.println("两次所输入的密码不一致！");
+				
+				changeManagerPwd();
+			}
+		} else {
+			System.out.println("密码错误！");
+		}
+	}
+
+	/**
+	 * 恢复被冻结账户
+	 */
+	private void recover() {
+		System.out.println("请输入要恢复的账号：");
+		
+		user = bank.validateUserName(input.next());
+		
+		if (user != null) {
+			if (user.isEnable()) {
+				System.out.println("用户" + user.getUsername() + "账户并未处于冻结状态！");
+			} else {
+				user.setEnable(true);
+				System.out.println("已成功解除" + user.getUsername() + "冻结状态！");
+			}
+		} else {
+			System.out.println("您输入的账号并不存在！");
+		}
+	}
+
+	/**
+	 * 账号冻结
+	 */
+	private void disable() {
+		System.out.println("请输入要冻结的账号：");
+		
+		user = bank.validateUserName(input.next());
+		
+		if(user != null) {
+			user.setEnable(false);
+			System.out.println("账号已冻结！");
+		} else {
+			System.out.println("您输入的账号不存在！");
+		}
+	}
+
+	/**
+	 * 查询银行所有已注册用户及其账户状态
+	 */
+	private void showAllCustomers() {
+		System.out.println("用户\t\t\t状态");
+		User[] user = bank.getUser();
+		for(int i = 0; i < user.length; i++) {
+			if(user[i] != null) {
+				System.out.println(user[i].getUsername() +
+						"\t\t\t" + (user[i].isEnable() ? "可用" : "不可用"));
+			}
+		}
+	}
+
+	/**
+	 * 用户登陆验证
+	 */
+	private void login() {
+		System.out.println("请输入账号：");
+		String name = input.next();
+		
+		System.out.println("请输入密码：");
+		String pwd = input.next();
+		
+		user = bank.validateUserName(name);
+		
+		if(user != null && user.getPassword().equals(pwd)) {
+			if(user.isEnable()) {
+				user.setErroeNum(0);
+				System.out.println(user.getUsername() + "欢迎您登录！");				
+				showCustomeMenu();
+			} else {
+				System.out.println("您的账户已被冻结,请尽快与银行联系！");
+			}	
+		} else {
+			if(user != null) {
+				System.out.println("您输入的密码错误！");
+				
+				if(userErrorNum == 0 && oldUser == null) {
+					oldUser = user;
+					userErrorNum = 1;
+					oldUser.setErroeNum(1);
+				} else if(oldUser.getErroeNum() == userErrorNum && oldUser.getUsername().equals(user.getUsername())) {
+					if(oldUser.getErroeNum() == 3) {
+						oldUser.setEnable(false);
+						System.out.println("连续三次密码错误，您的账号已被冻结，请尽快与银行工作人员联系！");
+					} else {
+						userErrorNum++;
+						oldUser.setErroeNum(userErrorNum);
+						
+						if(oldUser.getErroeNum() == 3) {
+							oldUser.setEnable(false);
+							System.out.println("连续三次密码错误，您的账号已被冻结，请尽快与银行工作人员联系！");
+						}
+					}
+				} else {
+					userErrorNum = 1;
+					oldUser.setErroeNum(0);
+					oldUser = user;
+					oldUser.setErroeNum(1);
+				}
+			} else {
+				System.out.println("您输入的帐号不存在！");
+			}
+			
+//			System.out.println(user.getErroeNum());
+			System.out.println("1：继续登录");
+			System.out.println("2：退出：");
+			
+			String index = input.next();
+			if (index.equals("1")) {
+				login();
+			} else if ("2".equals(index)){
+			} else {
+				System.out.println("您的输入有误！");
+				login();
+			}
+				
+				/*
+				System.out.println("您输入的密码错误！");
+				System.out.println("1：继续登录");
+				System.out.println("2：退出：");
+				
+				String index = input.next();
+				if (index.equals("1")) {
+					login();
+				} else if ("2".equals(index)){
+				} else {
+					System.out.println("输入有误！");
+				}*/
+		}
+	}
+	
+	/**
+	 * 客户显示界面
+	 */
+	private void showCustomeMenu() {
+		System.out.println("----------------------------");
+		System.out.println("1:查询余额");
+		System.out.println("2:存款");
+		System.out.println("3：取款");
+		System.out.println("4：转账");
+		System.out.println("5:修改密码");
+		System.out.println("6：退出");
+		System.out.println("----------------------------");
+		
+		System.out.println("请选择菜单项：");
+		
+		String index = input.next();
+		
+		if("1".equals(index)) {
+			showMoney(user.getUsername());
+		} else if("2".equals(index)) {
+			saveMoney(user.getUsername());
+		} else if("3".equals(index)) {
+			takeMoney(user.getUsername());
+		} else if("4".equals(index)) {
+			transMoney(user.getUsername());
+		} else if("5".equals(index)) {
+			changeUserPwd();
+		} else if("6".equals(index)) {
+			start();
+		} else {
+			System.out.println("输入有误，请重新输入！");
+		}
+		
+		showCustomeMenu();
+	}
+	
+	/**
+	 * 转账
+	 * @param username 转账用户账号
+	 */
+	private void transMoney(String username) {
+		System.out.println("请输入转账账号");
+		String name = input.next();
+	
+		User inUser;
+
+		inUser = bank.validateUserName(name);
+		
+		if (inUser != null) {
+			
+			System.out.println("请输入转账金额：");
+			float money = input.nextFloat();
+			
+			if (money >= 0) {
+				if (money > user.getMoney()) {
+					System.out.println("余额不足！");
+				} else {
+					inUser.setMoney(inUser.getMoney() + money);
+					System.out.println("转账成功！");
+				}
+			} else {
+				System.out.println("转账金额输入有误，请重新输入！");
+			}
+		} else {
+			System.out.println("转账账户不存在！");
+		}
+		
+		
+	}
+
+	/**
+	 * 取款
+	 * @param username 用户账户
+	 */
+	private void takeMoney(String username) {
+		System.out.println("请输入取款金额：");
+		float money = input.nextFloat();
+		
+		if(money >= 0) {
+			if (money > user.getMoney()) {
+				System.out.println("余额不足！");
+			} else {
+				user.setMoney(user.getMoney() - money);
+				System.out.println("取款成功");
+			} 
+		} else {
+			System.out.println("请输入正确的取款金额！");
+		}
+		
+		
+	}
+
+	/**
+	 * 存款
+	 * @param username 用户账户
+	 */
+	private void saveMoney(String username) {
+		System.out.println("请输入存款金额：");
+		float money = input.nextFloat();
+		
+		if ( money >= 0) {
+			user.setMoney(user.getMoney() + money);
+			System.out.println("存款成功！");
+		} else {
+			System.out.println("存款金额输入有误！");
+		}
+	}
+
+	/**
+	 * 查询账户余额
+	 * @param username 用户账号
+	 */
+	private void showMoney(String username) {
+		System.out.println("账户余额：" + user.getMoney());
+	}
+
+	/**
+	 * 创建新账户
+	 */
+	private void createUser() {
+		System.out.println("请输入用户名：");
+		String name = input.next();
+		
+		user = bank.validateUserName(name);
+		
+		if(user == null) {
+			System.out.println("请输入密码：");
+			String pwd = input.next();
+			
+			user = bank.setUser(name, pwd);
+			
+			if(user != null) {
+				System.out.println("开户成功！");
+			} else {
+				System.out.println("名额已满，请等待下一批！");
+			}
+			
+		} else {
+			System.out.println("该用户名已被使用！");
+		}
+	}
+
+
+
+
+
+
+
+
+}
